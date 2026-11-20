@@ -3,6 +3,7 @@ import { getAuth, type Auth } from 'firebase/auth';
 import { getFirestore, type Firestore, doc, setDoc, getDoc } from 'firebase/firestore';
 import { getStorage, type FirebaseStorage } from 'firebase/storage';
 import type { FirebaseConfig } from '../types';
+import type { AppUser } from '../types/auth';
 
 const FIREBASE_CONFIG_STORAGE_KEY = 'messmate_firebase_config_v1';
 
@@ -85,13 +86,46 @@ export function initFirebase(): {
 
 export const firebaseStatus = initFirebase();
 
-export async function uploadDataToCloud(data: any): Promise<{ success: boolean; error?: string }> {
+export function getActiveUserFromStorage(): AppUser | null {
+  try {
+    const raw = localStorage.getItem('messmate_current_user_v1');
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function isPrimaryAdmin(user?: AppUser | null): boolean {
+  if (!user) return false;
+  const u = (user.username || '').toLowerCase().trim();
+  const e = (user.email || '').toLowerCase().trim();
+  return (
+    u === 'admin' ||
+    e === 'admin@messmate.local' ||
+    e === 'imranadnanksa@gmail.com' ||
+    user.id === 'user_admin_1'
+  );
+}
+
+export function getUserCloudDocId(user?: AppUser | null): string {
+  const target = user !== undefined ? user : getActiveUserFromStorage();
+  if (!target || isPrimaryAdmin(target)) {
+    return 'main_backup';
+  }
+  return `user_backup_${target.id}`;
+}
+
+export async function uploadDataToCloud(
+  data: any,
+  user?: AppUser | null
+): Promise<{ success: boolean; error?: string }> {
   const { db, isConfigured } = initFirebase();
   if (!isConfigured || !db) {
     return { success: false, error: 'Firebase is not configured. Please enter your Firebase Project ID & API Key in Settings.' };
   }
   try {
-    const docRef = doc(db, 'messmate_data', 'main_backup');
+    const docId = getUserCloudDocId(user);
+    const docRef = doc(db, 'messmate_data', docId);
     await setDoc(docRef, {
       ...data,
       syncedAt: new Date().toISOString(),
@@ -102,13 +136,16 @@ export async function uploadDataToCloud(data: any): Promise<{ success: boolean; 
   }
 }
 
-export async function downloadDataFromCloud(): Promise<{ success: boolean; data?: any; error?: string }> {
+export async function downloadDataFromCloud(
+  user?: AppUser | null
+): Promise<{ success: boolean; data?: any; error?: string }> {
   const { db, isConfigured } = initFirebase();
   if (!isConfigured || !db) {
     return { success: false, error: 'Firebase is not configured. Please enter your Firebase Project ID & API Key in Settings.' };
   }
   try {
-    const docRef = doc(db, 'messmate_data', 'main_backup');
+    const docId = getUserCloudDocId(user);
+    const docRef = doc(db, 'messmate_data', docId);
     const snap = await getDoc(docRef);
     if (!snap.exists()) {
       return { success: false, error: 'No cloud data found in your Firestore collection yet.' };

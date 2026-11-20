@@ -635,6 +635,10 @@ class DataService {
           if (members.length === 0 && entries.length === 0 && bills.length === 0) {
             return;
           }
+          // Do not push empty shell data to cloud
+          if (entries.length === 0 && bills.length === 0) {
+            return;
+          }
           const backupJson = this.exportBackupJson();
           await uploadDataToCloud(JSON.parse(backupJson));
           console.log('[MessMate Cloud] Changes automatically synced to Firebase Firestore');
@@ -1357,6 +1361,26 @@ class DataService {
   public clearAllData(): void {
     localStorage.setItem(STORAGE_KEYS.MEMBERS, JSON.stringify([]));
     localStorage.setItem(STORAGE_KEYS.FOOD_ITEMS, JSON.stringify([]));
+    localStorage.setItem(STORAGE_KEYS.FOOD_ENTRIES, JSON.stringify([]));
+    localStorage.setItem(STORAGE_KEYS.MESS_BILLS, JSON.stringify([]));
+    localStorage.setItem(STORAGE_KEYS.BILLING_PERIODS, JSON.stringify([]));
+    localStorage.setItem(STORAGE_KEYS.AUDIT_LOGS, JSON.stringify([]));
+    this.notify();
+  }
+
+  public clearDataForNewUser(userName?: string): void {
+    const defaultMemberName = userName && userName.trim() ? userName.trim() : 'Admin';
+    const freshMembers: Member[] = [
+      {
+        id: `m_${Date.now()}`,
+        name: defaultMemberName,
+        active: true,
+        joinedAt: new Date().toISOString().split('T')[0],
+      },
+    ];
+
+    localStorage.setItem(STORAGE_KEYS.MEMBERS, JSON.stringify(freshMembers));
+    localStorage.setItem(STORAGE_KEYS.FOOD_ITEMS, JSON.stringify(SAMPLE_FOOD_ITEMS));
     localStorage.setItem(STORAGE_KEYS.FOOD_ENTRIES, JSON.stringify([]));
     localStorage.setItem(STORAGE_KEYS.MESS_BILLS, JSON.stringify([]));
     localStorage.setItem(STORAGE_KEYS.BILLING_PERIODS, JSON.stringify([]));

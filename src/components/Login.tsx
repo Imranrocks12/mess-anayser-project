@@ -84,6 +84,8 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
       });
 
       if (res.success && res.user) {
+        // Clear all previous mess data & bill records so newly created user starts completely fresh
+        dataService.clearDataForNewUser(res.user.name);
         onLoginSuccess(res.user);
       } else {
         setRegisterError(res.error || 'Failed to create user account.');

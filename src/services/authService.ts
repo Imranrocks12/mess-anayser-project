@@ -1,5 +1,6 @@
 import type { AppUser } from '../types/auth';
 import { uploadUsersToCloud, downloadUsersFromCloud } from './firebase';
+import { dataService } from './dataService';
 
 const STORAGE_KEYS = {
   USERS: 'messmate_users_v1',
@@ -260,6 +261,14 @@ class AuthService {
     } catch {
       // ignore
     }
+
+    // Immediately reset mess data & bill records to fresh state for the new user
+    try {
+      dataService.clearDataForNewUser(newUser.name);
+    } catch (e) {
+      console.warn('Could not reset data for new user:', e);
+    }
+
     this.notify();
 
     return { success: true, user: newUser };

@@ -87,7 +87,7 @@ export function App() {
     if (!currentUser) return;
     const config = getStoredFirebaseConfig();
     if (config && config.apiKey && config.projectId) {
-      downloadDataFromCloud()
+      downloadDataFromCloud(currentUser)
         .then((res) => {
           if (res.success && res.data) {
             const cloudData = res.data;
@@ -122,7 +122,7 @@ export function App() {
               );
               if (proceed) {
                 const backupJson = dataService.exportBackupJson();
-                uploadDataToCloud(JSON.parse(backupJson));
+                uploadDataToCloud(JSON.parse(backupJson), currentUser);
               }
             }
           }
